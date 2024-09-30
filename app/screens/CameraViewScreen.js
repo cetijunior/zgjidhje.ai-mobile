@@ -48,28 +48,39 @@ export default function CameraViewScreen() {
         }
     };
 
-    const saveItem = async (item) => {
-        try {
-            const savedItemsJSON = await AsyncStorage.getItem('savedItems');
-            const savedItems = savedItemsJSON ? JSON.parse(savedItemsJSON) : [];
+    const saveItem = async () => {
+        if (capturedImage) {
+            try {
+                // Generate a unique filename
+                const fileName = `image_${Date.now()}.jpg`;
+                const newPath = `${FileSystem.documentDirectory}${fileName}`;
 
-            const newItem = {
-                id: Date.now().toString(),
-                uri: item.uri,
-                type: item.type || 'image',
-                name: item.name || `Image_${Date.now()}.jpg`
-            };
-            const updatedItems = [...savedItems, newItem];
+                // Copy the file to app's document directory
+                await FileSystem.copyAsync({
+                    from: capturedImage.uri,
+                    to: newPath
+                });
 
-            await AsyncStorage.setItem('savedItems', JSON.stringify(updatedItems));
+                // Load existing saved pictures
+                const savedPicturesJSON = await AsyncStorage.getItem('savedPictures');
+                const savedPictures = savedPicturesJSON ? JSON.parse(savedPicturesJSON) : [];
 
-            console.log('Item saved successfully');
-            setCapturedImage(null);
-            setSelectedDocument(null);
+                // Add new picture to the array
+                const newPicture = { id: Date.now().toString(), uri: newPath };
+                const updatedPictures = [...savedPictures, newPicture];
 
-            navigation.navigate('Profile');
-        } catch (error) {
-            console.error('Error saving item:', error);
+                // Save updated array back to AsyncStorage
+                await AsyncStorage.setItem('savedPictures', JSON.stringify(updatedPictures));
+
+                console.log('Picture saved successfully');
+                setCapturedImage(null);
+
+                // Navigate to Profile screen after saving
+                navigation.navigate('Profile');
+
+            } catch (error) {
+                console.error('Error saving picture:', error);
+            }
         }
     };
 
@@ -91,11 +102,12 @@ export default function CameraViewScreen() {
 
             if (!result.canceled) {
                 const documentData = {
+                    id: Date.now().toString(),
                     uri: result.assets[0].uri,
                     type: 'document',
                     name: result.assets[0].name,
                 };
-                saveItem(documentData);
+                navigation.navigate('DocumentPreview', { document: documentData });
             }
         } else {
             let result = await ImagePicker.launchImageLibraryAsync({
@@ -106,7 +118,7 @@ export default function CameraViewScreen() {
             });
 
             if (!result.canceled) {
-                saveItem(result.assets[0]);
+                setCapturedImage(result.assets[0]);
             }
         }
     };
@@ -181,7 +193,7 @@ export default function CameraViewScreen() {
                     </ScrollView>
                     <CameraControls
                         currentMode={currentMode}
-                        toggleFacing={() => setFacing(facing === 'back' ? 'front' : 'back')}
+                        currentAIMode={currentAIMode}
                         takePicture={takePicture}
                         pickImage={pickImage}
                     />
@@ -198,13 +210,6 @@ export default function CameraViewScreen() {
         />
     );
 
-    const renderDocumentPreview = () => (
-        <DocumentPreview
-            document={selectedDocument}
-            onClose={() => setSelectedDocument(null)}
-            onSave={saveDocument}
-        />
-    );
 
     return (
         <View style={styles.container}>

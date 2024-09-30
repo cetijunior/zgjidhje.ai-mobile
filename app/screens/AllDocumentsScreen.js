@@ -32,12 +32,16 @@ const AllDocumentsScreen = () => {
 
     const renderDocumentItem = ({ item }) => (
         <TouchableOpacity
-            style={tw`m-2 p-4 bg-white rounded-xl shadow-md flex items-center justify-center`}
+            style={tw`flex-row items-center p-4 bg-white border-b border-gray-200`}
             onPress={() => setSelectedDocument(item)}
             onLongPress={() => promptDeleteDocument(item)}
         >
-            <Ionicons name="document-text" size={48} color="#4B5563" style={tw`mb-3`} />
-            <Text style={tw`text-sm font-medium text-gray-800 text-center`} numberOfLines={2}>{item.name}</Text>
+            <Ionicons name="document-text" size={24} color="#4B5563" style={tw`mr-4`} />
+            <View style={tw`flex-1`}>
+                <Text style={tw`text-base font-medium text-gray-800`} numberOfLines={1}>{item.name}</Text>
+                <Text style={tw`text-sm text-gray-500`}>{new Date(item.date).toLocaleDateString()}</Text>
+            </View>
+            <Text style={tw`text-sm text-gray-500`}>{item.size}</Text>
         </TouchableOpacity>
     );
 
@@ -80,8 +84,7 @@ const AllDocumentsScreen = () => {
                     data={savedDocuments}
                     renderItem={renderDocumentItem}
                     keyExtractor={(item) => item.id}
-                    numColumns={2}
-                    contentContainerStyle={tw`p-2`}
+                    contentContainerStyle={tw`pb-4`}
                 />
             ) : (
                 <View style={tw`flex-1 justify-center items-center p-6`}>
@@ -95,7 +98,9 @@ const AllDocumentsScreen = () => {
                     <View style={tw`bg-white rounded-2xl p-6 w-5/6 max-w-sm`}>
                         <Text style={tw`text-2xl font-bold mb-4 text-gray-800`}>{selectedDocument?.name}</Text>
                         <View style={tw`bg-gray-100 rounded-lg p-4 mb-6`}>
-                            <Text style={tw`text-gray-600 text-center`}>Document preview not available</Text>
+                            <Text style={tw`text-gray-600`}>Date: {new Date(selectedDocument?.date).toLocaleDateString()}</Text>
+                            <Text style={tw`text-gray-600 mt-2`}>Size: {selectedDocument?.size}</Text>
+                            <Text style={tw`text-gray-600 mt-2`}>Type: {selectedDocument?.type}</Text>
                         </View>
                         <View style={tw`flex-row justify-around`}>
                             <TouchableOpacity

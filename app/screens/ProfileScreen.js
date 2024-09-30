@@ -43,7 +43,9 @@ function ProfileScreen() {
         try {
             const savedItemsJSON = await AsyncStorage.getItem('savedItems');
             const items = savedItemsJSON ? JSON.parse(savedItemsJSON) : [];
-            setSavedItems(items);
+            // Sort items by date in descending order (newest first)
+            const sortedItems = items.sort((a, b) => new Date(b.date) - new Date(a.date));
+            setSavedItems(sortedItems);
         } catch (error) {
             console.error('Error loading saved items:', error);
         }
@@ -66,7 +68,7 @@ function ProfileScreen() {
     const renderSavedItem = ({ item }) => (
         <TouchableOpacity
             style={tw`mr-3 mb-3`}
-            onPress={() => navigation.navigate(item.type === 'document' ? 'DocumentPreview' : 'AllPictures', { document: item, image: item })}
+            onPress={() => navigation.navigate(item.type === 'document' ? 'AllDocuments' : 'AllPictures', { document: item, image: item })}
         >
             {item.type === 'document' ? (
                 <View style={tw`w-28 h-28 bg-gray-100 rounded-2xl justify-center items-center shadow-sm`}>
@@ -92,7 +94,7 @@ function ProfileScreen() {
             <View style={tw`relative bg-indigo-600 pb-20`}>
                 <Image
                     source={{ uri: image }}
-                    style={tw`w-32 h-32 rounded-full mx-auto mt-12 border-4 border-white shadow-lg`}
+                    style={tw`w-32 h-32 rounded-full mx-auto mt-4 border-4 border-white shadow-lg`}
                 />
                 <TouchableOpacity
                     style={tw`absolute bottom-16 right-1/2 bg-white p-2 rounded-full shadow-md`}
@@ -102,7 +104,7 @@ function ProfileScreen() {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView style={tw`flex-1 px-6 -mt-12`}>
+            <ScrollView style={tw`flex-1 px-6 -mt-14`}>
                 <View style={tw`bg-white rounded-3xl shadow-md px-6 py-8`}>
                     <Text style={tw`text-3xl font-bold text-center text-gray-800`}>{username}</Text>
                     <Text style={tw`text-gray-500 text-center mt-1`}>john.doe@example.com</Text>
@@ -110,7 +112,7 @@ function ProfileScreen() {
                     {!isPremium && (
                         <View style={tw`mt-2 h-auto`}>
                             <Swiper
-                                style={{ height: 220 }}
+                                style={{ height: 210 }}
                                 showsButtons={false}
                                 autoplay={true}
                                 autoplayTimeout={3}
@@ -120,13 +122,13 @@ function ProfileScreen() {
                                 activeDotStyle={tw`mt-4`}
                             >
                                 {premiumFeatures.map((feature, index) => (
-                                    <View key={index} style={tw`items-center px-4 pb-20 rounded-lg shadow-md`}>
+                                    <View key={index} style={tw`items-center px-4 rounded-lg`}>
                                         {renderPremiumFeature(feature, index)}
                                     </View>
                                 ))}
                             </Swiper>
                             <TouchableOpacity
-                                style={tw`mt-4  bg-purple-600 py-3 px-8 rounded-full shadow-md`}
+                                style={tw`mt-2 bg-purple-600 py-3 px-8 rounded-full shadow-md`}
                                 onPress={() => navigation.navigate('Subscription')}
                             >
                                 <Text style={tw`text-white text-center font-semibold`}>Upgrade to Premium</Text>
@@ -135,18 +137,42 @@ function ProfileScreen() {
                     )}
 
                     <View style={tw`mt-8`}>
-                        <Text style={tw`text-xl font-semibold mb-4 text-gray-800`}>Saved Items</Text>
-                        <FlatList
-                            data={savedItems}
-                            renderItem={renderSavedItem}
-                            keyExtractor={(item) => item.id}
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                        />
+                        <View style={tw`flex-row justify-between items-center mb-4`}>
+                            <Text style={tw`text-xl font-semibold text-gray-800`}>Saved Items</Text>
+                            <View style={tw`flex-row`}>
+                                <TouchableOpacity onPress={() => navigation.navigate('AllPictures')} style={tw`mr-4`}>
+                                    <Ionicons name="images-outline" size={24} color="#4B5563" />
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => navigation.navigate('AllDocuments')}>
+                                    <Ionicons name="document-text-outline" size={24} color="#4B5563" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                        {savedItems.length > 0 ? (
+                            <FlatList
+                                data={savedItems.slice().reverse()}
+                                renderItem={renderSavedItem}
+                                keyExtractor={(item) => item.id}
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={tw`justify-start`}
+                                initialScrollIndex={0}
+                                getItemLayout={(data, index) => ({
+                                    length: 100, // Adjust this value based on your item width
+                                    offset: 100 * index,
+                                    index,
+                                })}
+                            />
+                        ) : (
+                            <View style={tw`items-center py-4`}>
+                                <Ionicons name="document-text-outline" size={48} color="#9CA3AF" style={tw`mb-2`} />
+                                <Text style={tw`text-gray-500 text-center`}>No saved items yet</Text>
+                            </View>
+                        )}
                     </View>
 
                     <View style={tw`mt-8`}>
-                        <TouchableOpacity style={tw`flex-row items-center py-4 border-b border-gray-200`}>
+                        <TouchableOpacity style={tw`flex-row items-center py-4  border-t border-b border-gray-200`}>
                             <Ionicons name="settings-outline" size={24} color="#4B5563" style={tw`mr-4`} />
                             <Text style={tw`text-lg text-gray-700`}>Settings</Text>
                         </TouchableOpacity>

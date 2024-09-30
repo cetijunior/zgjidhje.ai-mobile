@@ -129,11 +129,13 @@ const SubscriptionScreen = () => {
 
                     <View style={[tw`items-center justify-center`, { height: height * 0.4, width: width }]}>
                         <Animated.FlatList
+                            key={`plans-${width}`} // Add this line
                             ref={flatListRef}
                             data={plans}
                             renderItem={renderPlanItem}
                             keyExtractor={(item, index) => index.toString()}
-                            horizontal
+                            horizontal={true} // Explicitly set horizontal
+                            numColumns={1} // Explicitly set numColumns to 1
                             pagingEnabled
                             showsHorizontalScrollIndicator={false}
                             snapToInterval={ITEM_WIDTH}

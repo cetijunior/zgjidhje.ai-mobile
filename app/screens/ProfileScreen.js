@@ -1,23 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, TextInput, FlatList } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { View, Text, Image, TouchableOpacity, TextInput, FlatList, ScrollView } from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Swiper from 'react-native-swiper';
 
 function ProfileScreen() {
     const navigation = useNavigation();
     const [image, setImage] = useState('https://via.placeholder.com/150');
     const [username, setUsername] = useState('John Doe');
     const [isEditingUsername, setIsEditingUsername] = useState(false);
-    const [savedPictures, setSavedPictures] = useState([]);
+    const [savedItems, setSavedItems] = useState([]);
 
-    useEffect(() => {
-        loadProfile();
-        loadSavedPictures();
-    }, []);
+    useFocusEffect(
+        React.useCallback(() => {
+            loadProfile();
+            loadSavedItems();
+        }, [])
+    );
 
     const loadProfile = async () => {
         try {
@@ -30,13 +31,13 @@ function ProfileScreen() {
         }
     };
 
-    const loadSavedPictures = async () => {
+    const loadSavedItems = async () => {
         try {
-            const savedPicturesJSON = await AsyncStorage.getItem('savedPictures');
-            const pictures = savedPicturesJSON ? JSON.parse(savedPicturesJSON) : [];
-            setSavedPictures(pictures);
+            const savedItemsJSON = await AsyncStorage.getItem('savedItems');
+            const items = savedItemsJSON ? JSON.parse(savedItemsJSON) : [];
+            setSavedItems(items);
         } catch (error) {
-            console.error('Error loading saved pictures:', error);
+            console.error('Error loading saved items:', error);
         }
     };
 
@@ -50,21 +51,40 @@ function ProfileScreen() {
 
         if (!result.canceled) {
             setImage(result.assets[0].uri);
+            await AsyncStorage.setItem('profileImage', result.assets[0].uri);
         }
     };
 
-    const toggleUsernameEdit = () => {
+    const toggleUsernameEdit = async () => {
+        if (isEditingUsername) {
+            await AsyncStorage.setItem('username', username);
+        }
         setIsEditingUsername(!isEditingUsername);
     };
 
-    const renderSavedPicture = ({ item }) => (
-        <TouchableOpacity style={tw`mr-2`}>
-            <Image source={{ uri: item.uri }} style={tw`w-20 h-20 rounded-lg`} />
+    const renderSavedDocument = ({ item }) => (
+        <TouchableOpacity
+            style={tw`mr-2 mb-2`}
+            onPress={() => navigation.navigate('DocumentPreview', { document: item })}
+        >
+            <View style={tw`w-24 h-24 bg-gray-200 rounded-lg justify-center items-center`}>
+                <Ionicons name="document-text" size={40} color="gray" />
+                <Text style={tw`text-xs mt-1 text-center`} numberOfLines={1}>{item.name}</Text>
+            </View>
+        </TouchableOpacity>
+    );
+
+    const renderSavedImage = ({ item }) => (
+        <TouchableOpacity
+            style={tw`mr-2 mb-2`}
+            onPress={() => navigation.navigate('AllPictures', { image: item })}
+        >
+            <Image source={{ uri: item.uri }} style={tw`w-24 h-24 rounded-lg`} />
         </TouchableOpacity>
     );
 
     return (
-        <View style={tw`flex-1 bg-white`}>
+        <ScrollView style={tw`flex-1 bg-white`}>
             <View style={tw`pt-12 pb-3 px-4 rounded-b-3xl bg-gray-800`}>
                 {/* Removed glowing backdrop */}
             </View>
@@ -95,18 +115,37 @@ function ProfileScreen() {
                 </View>
                 <View style={tw`mt-6 flex-1`}>
                     <View style={tw`flex-row justify-between items-center mb-2`}>
-                        <Text style={tw`text-lg font-semibold text-gray-800`}>Saved Pictures</Text>
+                        <Text style={tw`text-lg font-semibold text-gray-800`}>Saved Documents</Text>
                         <TouchableOpacity
                             style={tw`bg-gray-800 p-2 rounded-full justify-center items-center`}
-                            onPress={() => navigation.navigate('AllPictures', { pictures: savedPictures })}
+                            onPress={() => navigation.navigate('AllDocuments', { items: savedItems.filter(item => item.type === 'document') })}
+                        >
+                            <Ionicons name="document-text" size={20} color="white" />
+                        </TouchableOpacity>
+                    </View>
+                    <View style={tw`mb-3`}>
+                        <FlatList
+                            data={savedItems.filter(item => item.type === 'document')}
+                            renderItem={renderSavedDocument}
+                            keyExtractor={(item) => item.id}
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={tw`py-1`}
+                        />
+                    </View>
+                    <View style={tw`flex-row justify-between items-center mb-2 mt-4`}>
+                        <Text style={tw`text-lg font-semibold text-gray-800`}>Saved Images</Text>
+                        <TouchableOpacity
+                            style={tw`bg-gray-800 p-2 rounded-full justify-center items-center`}
+                            onPress={() => navigation.navigate('AllPictures', { items: savedItems.filter(item => item.type !== 'document') })}
                         >
                             <Ionicons name="images-outline" size={20} color="white" />
                         </TouchableOpacity>
                     </View>
-                    <View style={tw`h-28 mb-3`}>
+                    <View style={tw`mb-3`}>
                         <FlatList
-                            data={savedPictures}
-                            renderItem={renderSavedPicture}
+                            data={savedItems.filter(item => item.type !== 'document')}
+                            renderItem={renderSavedImage}
                             keyExtractor={(item) => item.id}
                             horizontal
                             showsHorizontalScrollIndicator={false}
@@ -131,7 +170,7 @@ function ProfileScreen() {
                     </TouchableOpacity>
                 </View>
             </View>
-        </View>
+        </ScrollView>
     );
 }
 

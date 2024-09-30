@@ -4,6 +4,7 @@ import { StyleSheet, TouchableOpacity, View, Text, Image, Dimensions, ScrollView
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { manipulateAsync } from 'expo-image-manipulator';
 import tw from 'twrnc';
 import { useNavigation } from '@react-navigation/native';
@@ -23,6 +24,7 @@ export default function CameraViewScreen() {
     const cameraRef = useRef(null);
     const navigation = useNavigation();
     const [scanArea, setScanArea] = useState({ x: 0, y: 0, width: 0, height: 0 });
+    const [selectedDocument, setSelectedDocument] = useState(null);
 
     const modes = [
         { key: 'document', icon: 'document-text-outline' },
@@ -30,11 +32,11 @@ export default function CameraViewScreen() {
     ];
 
     const AImodes = [
-        { key: 'math', icon: 'calculator-outline', label: 'Math' },
-        { key: 'science', icon: 'flask-outline', label: 'Science' },
-        { key: 'history', icon: 'book-outline', label: 'History' },
-        { key: 'literature', icon: 'library-outline', label: 'Literature' },
-        { key: 'language', icon: 'language-outline', label: 'Language' },
+        { key: 'math', icon: 'calculator', label: 'Math' },
+        { key: 'science', icon: 'flask', label: 'Science' },
+        { key: 'history', icon: 'book', label: 'History' },
+        { key: 'literature', icon: 'library', label: 'Literature' },
+        { key: 'language', icon: 'language', label: 'Language' },
     ];
 
     const takePicture = async () => {
@@ -46,39 +48,28 @@ export default function CameraViewScreen() {
         }
     };
 
-    const saveItem = async () => {
-        if (capturedImage) {
-            try {
-                // Generate a unique filename
-                const fileName = `image_${Date.now()}.jpg`;
-                const newPath = `${FileSystem.documentDirectory}${fileName}`;
+    const saveItem = async (item) => {
+        try {
+            const savedItemsJSON = await AsyncStorage.getItem('savedItems');
+            const savedItems = savedItemsJSON ? JSON.parse(savedItemsJSON) : [];
 
-                // Copy the file to app's document directory
-                await FileSystem.copyAsync({
-                    from: capturedImage.uri,
-                    to: newPath
-                });
+            const newItem = {
+                id: Date.now().toString(),
+                uri: item.uri,
+                type: item.type || 'image',
+                name: item.name || `Image_${Date.now()}.jpg`
+            };
+            const updatedItems = [...savedItems, newItem];
 
-                // Load existing saved pictures
-                const savedPicturesJSON = await AsyncStorage.getItem('savedPictures');
-                const savedPictures = savedPicturesJSON ? JSON.parse(savedPicturesJSON) : [];
+            await AsyncStorage.setItem('savedItems', JSON.stringify(updatedItems));
 
-                // Add new picture to the array
-                const newPicture = { id: Date.now().toString(), uri: newPath };
-                const updatedPictures = [...savedPictures, newPicture];
+            console.log('Item saved successfully');
+            setCapturedImage(null);
+            setSelectedDocument(null);
 
-                // Save updated array back to AsyncStorage
-                await AsyncStorage.setItem('savedPictures', JSON.stringify(updatedPictures));
-
-                console.log('Picture saved successfully');
-                setCapturedImage(null);
-
-                // Navigate to Profile screen after saving
-                navigation.navigate('Profile');
-
-            } catch (error) {
-                console.error('Error saving picture:', error);
-            }
+            navigation.navigate('Profile');
+        } catch (error) {
+            console.error('Error saving item:', error);
         }
     };
 
@@ -93,31 +84,50 @@ export default function CameraViewScreen() {
     }, []);
 
     const pickImage = async () => {
-        let result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 1,
-        });
+        if (currentMode === 'document') {
+            let result = await DocumentPicker.getDocumentAsync({
+                type: '*/*',
+            });
 
-        if (!result.canceled) {
-            setCapturedImage(result.assets[0]);
-            if (currentMode === 'document') {
-                // Process the picked image as a document
-                const processedImage = await manipulateAsync(
-                    result.assets[0].uri,
-                    [{ resize: { width: 1000 } }],
-                    { format: 'jpeg' }
-                );
-                const visionResult = await Vision.textRecognizer.process(processedImage.uri);
+            if (!result.canceled) {
                 const documentData = {
-                    id: Date.now().toString(),
                     uri: result.assets[0].uri,
                     type: 'document',
-                    text: visionResult.text
+                    name: result.assets[0].name,
                 };
-                navigation.navigate('DocumentViewer', { document: documentData });
+                saveItem(documentData);
             }
+        } else {
+            let result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 1,
+            });
+
+            if (!result.canceled) {
+                saveItem(result.assets[0]);
+            }
+        }
+    };
+
+    const saveDocument = async (newPath) => {
+        try {
+            const savedDocumentsJSON = await AsyncStorage.getItem('savedDocuments');
+            const savedDocuments = savedDocumentsJSON ? JSON.parse(savedDocumentsJSON) : [];
+
+            const newDocument = { id: Date.now().toString(), uri: newPath, name: selectedDocument.name };
+            const updatedDocuments = [...savedDocuments, newDocument];
+
+            await AsyncStorage.setItem('savedDocuments', JSON.stringify(updatedDocuments));
+
+            console.log('Document saved successfully');
+            setSelectedDocument(null);
+
+            // Navigate to Profile screen after saving
+            navigation.navigate('Profile');
+        } catch (error) {
+            console.error('Error saving document:', error);
         }
     };
 
@@ -133,7 +143,7 @@ export default function CameraViewScreen() {
         } else {
             const height = screenHeight * 0.5;
             const width = height * (3 / 4);
-            scanAreaStyle = tw`absolute w-[${width}px] h-[${height}px] border-2 border-white rounded-lg left-[${(screenWidth - width) / 2}px] top-[${(screenHeight - height) / 2}px]`;
+            scanAreaStyle = tw`absolute -mt-10 w-[${width}px] h-[${height}px] border-2 border-white rounded-lg left-[${(screenWidth - width) / 2}px] top-[${(screenHeight - height) / 2}px]`;
         }
 
         return (
@@ -156,11 +166,13 @@ export default function CameraViewScreen() {
                                 }}
                                 style={tw`mx-4 items-center`}
                             >
-                                <Ionicons
-                                    name={mode.icon}
-                                    size={24}
-                                    color="white"
-                                />
+                                <View style={tw`${currentAIMode === mode.label ? 'bg-white rounded-full p-1' : ''}`}>
+                                    <Ionicons
+                                        name={mode.icon}
+                                        size={24}
+                                        color={currentAIMode === mode.label ? 'black' : 'white'}
+                                    />
+                                </View>
                                 <Text style={tw`text-xs mt-1 text-white`}>
                                     {mode.label}
                                 </Text>
@@ -186,9 +198,19 @@ export default function CameraViewScreen() {
         />
     );
 
+    const renderDocumentPreview = () => (
+        <DocumentPreview
+            document={selectedDocument}
+            onClose={() => setSelectedDocument(null)}
+            onSave={saveDocument}
+        />
+    );
+
     return (
         <View style={styles.container}>
-            {capturedImage ? renderImagePreview() : renderCamera()}
+            {selectedDocument ? renderDocumentPreview() :
+                capturedImage ? renderImagePreview() :
+                    renderCamera()}
         </View>
     );
 }

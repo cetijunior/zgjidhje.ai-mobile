@@ -10,10 +10,10 @@ const CameraControls = ({ currentMode, toggleMode, takePicture, pickImage, toggl
                 <Ionicons name="camera-reverse-outline" size={36} color="white" />
             </TouchableOpacity>
             <TouchableOpacity onPress={takePicture} style={tw`bg-white rounded-full p-4`}>
-                <Ionicons name={currentMode === 'photo' ? "camera" : "document-text"} size={36} color="black" />
+                <Ionicons name={currentMode === 'photo' ? "camera" : "document-outline"} size={36} color="black" />
             </TouchableOpacity>
             <TouchableOpacity onPress={pickImage} style={tw`p-3`}>
-                <Ionicons name={currentMode === 'document' ? "document-outline" : "image-outline"} size={36} color="white" />
+                <Ionicons name={currentMode === 'document' ? "document-text" : "image-outline"} size={36} color="white" />
             </TouchableOpacity>
         </View>
     );

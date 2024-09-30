@@ -3,13 +3,14 @@ import { View, Text, Image, FlatList, TouchableOpacity, Modal, Alert, Share } fr
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import tw from 'twrnc';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import * as MediaLibrary from 'expo-media-library';
 
 const AllPicturesScreen = () => {
     const [savedPictures, setSavedPictures] = useState([]);
     const [selectedImage, setSelectedImage] = useState(null);
     const navigation = useNavigation();
+    const route = useRoute();
 
     useEffect(() => {
         loadSavedPictures();
@@ -17,9 +18,15 @@ const AllPicturesScreen = () => {
 
     const loadSavedPictures = async () => {
         try {
-            const savedPicturesJSON = await AsyncStorage.getItem('savedPictures');
-            const pictures = savedPicturesJSON ? JSON.parse(savedPicturesJSON) : [];
-            setSavedPictures(pictures);
+            if (route.params?.items) {
+                // If items are passed from the ProfileScreen, use those
+                setSavedPictures(route.params.items.filter(item => item.type !== 'document'));
+            } else {
+                // Otherwise, load from AsyncStorage as before
+                const savedItemsJSON = await AsyncStorage.getItem('savedItems');
+                const items = savedItemsJSON ? JSON.parse(savedItemsJSON) : [];
+                setSavedPictures(items.filter(item => item.type !== 'document'));
+            }
         } catch (error) {
             console.error('Error loading saved pictures:', error);
         }
@@ -27,11 +34,11 @@ const AllPicturesScreen = () => {
 
     const renderPictureItem = ({ item }) => (
         <TouchableOpacity
-            style={tw`m-1`}
+            style={tw`m-1 items-center justify-center`}
             onPress={() => setSelectedImage(item)}
             onLongPress={() => promptDeletePicture(item)}
         >
-            <Image source={{ uri: item.uri }} style={tw`w-32 h-32 rounded-lg`} />
+            <Image source={{ uri: item.uri }} style={tw`w-28 h-28 rounded-lg`} />
         </TouchableOpacity>
     );
 
@@ -49,7 +56,7 @@ const AllPicturesScreen = () => {
     const deletePicture = async (picture) => {
         try {
             const updatedPictures = savedPictures.filter(p => p.id !== picture.id);
-            await AsyncStorage.setItem('savedPictures', JSON.stringify(updatedPictures));
+            await AsyncStorage.setItem('savedItems', JSON.stringify(updatedPictures));
             setSavedPictures(updatedPictures);
             if (selectedImage && selectedImage.id === picture.id) {
                 setSelectedImage(null);
@@ -96,16 +103,14 @@ const AllPicturesScreen = () => {
 
     return (
         <View style={tw`flex-1 bg-gray-100`}>
-            <View style={tw`flex-row justify-center items-center p-4 bg-white`}>
-                <Text style={tw`text-2xl font-bold text-gray-800`}>Saved Pictures</Text>
-            </View>
+
             {savedPictures.length > 0 ? (
                 <FlatList
                     data={savedPictures}
                     renderItem={renderPictureItem}
                     keyExtractor={(item) => item.id}
                     numColumns={3}
-                    contentContainerStyle={tw`mx-auto flex-grow justify-start`}
+                    contentContainerStyle={tw`w-full  justify-center items-center`}
                 />
             ) : (
                 <View style={tw`flex-1 justify-center items-center`}>
@@ -114,34 +119,36 @@ const AllPicturesScreen = () => {
                 </View>
             )}
             <Modal visible={!!selectedImage} transparent={true} onRequestClose={() => setSelectedImage(null)}>
-                <View style={tw`flex-1 bg-black bg-opacity-90 justify-between items-center p-4`}>
-                    <TouchableOpacity
-                        style={tw`self-end mt-10`}
-                        onPress={() => setSelectedImage(null)}
-                    >
-                        <Ionicons name="close" size={30} color="white" />
-                    </TouchableOpacity>
-                    <View style={tw`flex-1 w-full justify-center items-center`}>
-                        <View style={tw`w-full h-3/4 bg-white rounded-lg overflow-hidden`}>
-                            <Image
-                                source={{ uri: selectedImage?.uri }}
-                                style={tw`w-full h-full`}
-                                resizeMode="contain"
-                            />
-                        </View>
-                    </View>
-                    <View style={tw`flex-row justify-center w-full mt-4`}>
+                <View style={tw`flex-1 bg-black`}>
+                    <Image
+                        source={{ uri: selectedImage?.uri }}
+                        style={tw`w-full h-full`}
+                        resizeMode="contain"
+                    />
+                    <View style={tw`absolute bottom-14 left-0 right-0 flex-row justify-evenly p-4`}>
                         <TouchableOpacity
-                            style={tw`bg-blue-500 p-3 rounded-full mx-2`}
-                            onPress={() => savePictureToDevice(selectedImage.uri)}
+                            style={tw`p-2 bg-black bg-opacity-50 rounded-full`}
+                            onPress={() => setSelectedImage(null)}
                         >
-                            <Ionicons name="save-outline" size={24} color="white" />
+                            <Ionicons name="close" size={30} color="white" />
                         </TouchableOpacity>
                         <TouchableOpacity
-                            style={tw`bg-green-500 p-3 rounded-full mx-2`}
+                            style={tw`p-2 bg-black bg-opacity-50 rounded-full`}
+                            onPress={() => savePictureToDevice(selectedImage.uri)}
+                        >
+                            <Ionicons name="save-outline" size={30} color="white" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={tw`p-2 bg-black bg-opacity-50 rounded-full`}
                             onPress={() => sharePicture(selectedImage.uri)}
                         >
-                            <Ionicons name="share-outline" size={24} color="white" />
+                            <Ionicons name="share-outline" size={30} color="white" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={tw`p-2 bg-black bg-opacity-50 rounded-full`}
+                            onPress={() => promptDeletePicture(selectedImage)}
+                        >
+                            <Ionicons name="trash-outline" size={30} color="white" />
                         </TouchableOpacity>
                     </View>
                 </View>

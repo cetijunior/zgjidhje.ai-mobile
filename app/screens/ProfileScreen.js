@@ -1,17 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, TextInput, FlatList, ScrollView } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ScrollView, FlatList, Dimensions } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Swiper from 'react-native-swiper';
 
 function ProfileScreen() {
     const navigation = useNavigation();
     const [image, setImage] = useState('https://via.placeholder.com/150');
     const [username, setUsername] = useState('John Doe');
-    const [isEditingUsername, setIsEditingUsername] = useState(false);
     const [savedItems, setSavedItems] = useState([]);
+    const [isPremium, setIsPremium] = useState(false);
+
+    const premiumFeatures = [
+        { icon: 'infinite', title: 'Unlimited Scans', description: 'Scan as many documents as you want' },
+        { icon: 'cloud-upload', title: 'Cloud Storage', description: 'Securely store your documents in the cloud' },
+        { icon: 'analytics', title: 'Advanced Analytics', description: 'Get insights from your scanned documents' },
+        { icon: 'color-wand', title: 'Enhanced OCR', description: 'Improved text recognition accuracy' },
+    ];
 
     useFocusEffect(
         React.useCallback(() => {
@@ -55,122 +63,105 @@ function ProfileScreen() {
         }
     };
 
-    const toggleUsernameEdit = async () => {
-        if (isEditingUsername) {
-            await AsyncStorage.setItem('username', username);
-        }
-        setIsEditingUsername(!isEditingUsername);
-    };
-
-    const renderSavedDocument = ({ item }) => (
+    const renderSavedItem = ({ item }) => (
         <TouchableOpacity
-            style={tw`mr-2 mb-2`}
-            onPress={() => navigation.navigate('DocumentPreview', { document: item })}
+            style={tw`mr-3 mb-3`}
+            onPress={() => navigation.navigate(item.type === 'document' ? 'DocumentPreview' : 'AllPictures', { document: item, image: item })}
         >
-            <View style={tw`w-24 h-24 bg-gray-200 rounded-lg justify-center items-center`}>
-                <Ionicons name="document-text" size={40} color="gray" />
-                <Text style={tw`text-xs mt-1 text-center`} numberOfLines={1}>{item.name}</Text>
-            </View>
+            {item.type === 'document' ? (
+                <View style={tw`w-28 h-28 bg-gray-100 rounded-2xl justify-center items-center shadow-sm`}>
+                    <Ionicons name="document-text" size={40} color="#4B5563" />
+                    <Text style={tw`text-xs mt-2 text-center text-gray-600`} numberOfLines={1}>{item.name}</Text>
+                </View>
+            ) : (
+                <Image source={{ uri: item.uri }} style={tw`w-28 h-28 rounded-2xl shadow-sm`} />
+            )}
         </TouchableOpacity>
     );
 
-    const renderSavedImage = ({ item }) => (
-        <TouchableOpacity
-            style={tw`mr-2 mb-2`}
-            onPress={() => navigation.navigate('AllPictures', { image: item })}
-        >
-            <Image source={{ uri: item.uri }} style={tw`w-24 h-24 rounded-lg`} />
-        </TouchableOpacity>
+    const renderPremiumFeature = (feature, index) => (
+        <View key={index} style={tw`items-center px-4 py-6`}>
+            <Ionicons name={feature.icon} size={48} color="#4F46E5" />
+            <Text style={tw`text-xl font-bold mt-4 text-gray-800`}>{feature.title}</Text>
+            <Text style={tw`text-sm text-gray-600 text-center mt-2`}>{feature.description}</Text>
+        </View>
     );
 
     return (
-        <ScrollView style={tw`flex-1 bg-white`}>
-            <View style={tw`pt-12 pb-3 px-4 rounded-b-3xl bg-gray-800`}>
-                {/* Removed glowing backdrop */}
+        <View style={tw`flex-1 bg-gray-50`}>
+            <View style={tw`relative bg-indigo-600 pb-20`}>
+                <Image
+                    source={{ uri: image }}
+                    style={tw`w-32 h-32 rounded-full mx-auto mt-12 border-4 border-white shadow-lg`}
+                />
+                <TouchableOpacity
+                    style={tw`absolute bottom-16 right-1/2 bg-white p-2 rounded-full shadow-md`}
+                    onPress={pickImage}
+                >
+                    <Ionicons name="camera" size={24} color="#4F46E5" />
+                </TouchableOpacity>
             </View>
-            <View style={tw`flex-1 bg-gray-200 rounded-t-3xl px-4 pt-6 relative`}>
-                {/* Removed glowing effect for the rounded top */}
-                <View style={tw`items-center -mt-16 relative z-10`}>
-                    <TouchableOpacity onPress={pickImage}>
-                        <Image
-                            source={{ uri: image }}
-                            style={tw`w-28 h-28 rounded-full border-4 border-white shadow-lg`}
-                        />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={toggleUsernameEdit} style={tw`mt-3 flex-row items-center`}>
-                        {isEditingUsername ? (
-                            <TextInput
-                                value={username}
-                                onChangeText={setUsername}
-                                style={tw`text-xl font-semibold text-gray-800 text-center`}
-                                autoFocus
-                                onBlur={toggleUsernameEdit}
-                            />
-                        ) : (
-                            <Text style={tw`text-xl font-semibold text-gray-800`}>{username}</Text>
-                        )}
-                        <Ionicons name="create-outline" size={18} color="#4B5563" style={tw`ml-2`} />
-                    </TouchableOpacity>
-                    <Text style={tw`text-gray-600 mt-1 text-sm`}>john.doe@example.com</Text>
-                </View>
-                <View style={tw`mt-6 flex-1`}>
-                    <View style={tw`flex-row justify-between items-center mb-2`}>
-                        <Text style={tw`text-lg font-semibold text-gray-800`}>Saved Documents</Text>
-                        <TouchableOpacity
-                            style={tw`bg-gray-800 p-2 rounded-full justify-center items-center`}
-                            onPress={() => navigation.navigate('AllDocuments', { items: savedItems.filter(item => item.type === 'document') })}
-                        >
-                            <Ionicons name="document-text" size={20} color="white" />
-                        </TouchableOpacity>
-                    </View>
-                    <View style={tw`mb-3`}>
+
+            <ScrollView style={tw`flex-1 px-6 -mt-12`}>
+                <View style={tw`bg-white rounded-3xl shadow-md px-6 py-8`}>
+                    <Text style={tw`text-3xl font-bold text-center text-gray-800`}>{username}</Text>
+                    <Text style={tw`text-gray-500 text-center mt-1`}>john.doe@example.com</Text>
+
+                    {!isPremium && (
+                        <View style={tw`mt-2 h-auto`}>
+                            <Swiper
+                                style={{ height: 220 }}
+                                showsButtons={false}
+                                autoplay={true}
+                                autoplayTimeout={3}
+                                loop={true}
+                                activeDotColor="#4F46E5"
+                                dotStyle={tw`mt-4`}
+                                activeDotStyle={tw`mt-4`}
+                            >
+                                {premiumFeatures.map((feature, index) => (
+                                    <View key={index} style={tw`items-center px-4 pb-20 rounded-lg shadow-md`}>
+                                        {renderPremiumFeature(feature, index)}
+                                    </View>
+                                ))}
+                            </Swiper>
+                            <TouchableOpacity
+                                style={tw`mt-4  bg-purple-600 py-3 px-8 rounded-full shadow-md`}
+                                onPress={() => navigation.navigate('Subscription')}
+                            >
+                                <Text style={tw`text-white text-center font-semibold`}>Upgrade to Premium</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
+                    <View style={tw`mt-8`}>
+                        <Text style={tw`text-xl font-semibold mb-4 text-gray-800`}>Saved Items</Text>
                         <FlatList
-                            data={savedItems.filter(item => item.type === 'document')}
-                            renderItem={renderSavedDocument}
+                            data={savedItems}
+                            renderItem={renderSavedItem}
                             keyExtractor={(item) => item.id}
                             horizontal
                             showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={tw`py-1`}
                         />
                     </View>
-                    <View style={tw`flex-row justify-between items-center mb-2 mt-4`}>
-                        <Text style={tw`text-lg font-semibold text-gray-800`}>Saved Images</Text>
-                        <TouchableOpacity
-                            style={tw`bg-gray-800 p-2 rounded-full justify-center items-center`}
-                            onPress={() => navigation.navigate('AllPictures', { items: savedItems.filter(item => item.type !== 'document') })}
-                        >
-                            <Ionicons name="images-outline" size={20} color="white" />
+
+                    <View style={tw`mt-8`}>
+                        <TouchableOpacity style={tw`flex-row items-center py-4 border-b border-gray-200`}>
+                            <Ionicons name="settings-outline" size={24} color="#4B5563" style={tw`mr-4`} />
+                            <Text style={tw`text-lg text-gray-700`}>Settings</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={tw`flex-row items-center py-4 border-b border-gray-200`}>
+                            <Ionicons name="help-circle-outline" size={24} color="#4B5563" style={tw`mr-4`} />
+                            <Text style={tw`text-lg text-gray-700`}>Help & Support</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={tw`flex-row items-center py-4`}>
+                            <Ionicons name="log-out-outline" size={24} color="#EF4444" style={tw`mr-4`} />
+                            <Text style={tw`text-lg text-red-500`}>Log Out</Text>
                         </TouchableOpacity>
                     </View>
-                    <View style={tw`mb-3`}>
-                        <FlatList
-                            data={savedItems.filter(item => item.type !== 'document')}
-                            renderItem={renderSavedImage}
-                            keyExtractor={(item) => item.id}
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={tw`py-1`}
-                        />
-                    </View>
-                    <TouchableOpacity style={tw`flex-row items-center bg-white rounded-xl p-3 mb-3 shadow-md`}>
-                        <Ionicons name="person-outline" size={22} color="#000000" style={tw`mr-3`} />
-                        <Text style={tw`text-base font-medium text-gray-800`}>Edit Profile</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={tw`flex-row items-center bg-white rounded-xl p-3 mb-3 shadow-md`}>
-                        <Ionicons name="settings-outline" size={22} color="#000000" style={tw`mr-3`} />
-                        <Text style={tw`text-base font-medium text-gray-800`}>Settings</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={tw`flex-row items-center bg-white rounded-xl p-3 mb-3 shadow-md`}>
-                        <Ionicons name="help-circle-outline" size={22} color="#000000" style={tw`mr-3`} />
-                        <Text style={tw`text-base font-medium text-gray-800`}>Help & Support</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={tw`flex-row items-center justify-center bg-black rounded-xl p-3 mb-10 mt-auto shadow-lg`}>
-                        <Ionicons name="log-out-outline" size={22} color="white" style={tw`mr-3`} />
-                        <Text style={tw`text-base font-medium text-white`}>Log Out</Text>
-                    </TouchableOpacity>
                 </View>
-            </View>
-        </ScrollView>
+            </ScrollView>
+        </View>
     );
 }
 

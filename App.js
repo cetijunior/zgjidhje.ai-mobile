@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import SubscriptionScreen from './app/screens/SubscriptionScreen';
 import CameraViewScreen from './app/screens/CameraViewScreen';
 import ProfileScreen from './app/screens/ProfileScreen';
 import AllPicturesScreen from './app/screens/AllPicturesScreen';
@@ -15,7 +16,7 @@ const defaultHeaderOptions = {
   headerShown: true,
   headerLeft: () => null, // This removes the default back button
   headerStyle: {
-    backgroundColor: '#1F2937', // Dark gray background
+    backgroundColor: '#4F46E5', // Indigo-600 background
   },
   headerTintColor: '#FFFFFF', // White text
   headerTitleStyle: {
@@ -26,7 +27,12 @@ const defaultHeaderOptions = {
 const App = () => {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="CameraView">
+      <Stack.Navigator initialRouteName="Subscription">
+        <Stack.Screen
+          name="Subscription"
+          component={SubscriptionScreen}
+          options={{ headerShown: false }}
+        />
         <Stack.Screen
           name="CameraView"
           component={CameraViewScreen}

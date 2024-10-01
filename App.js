@@ -9,6 +9,7 @@ import DocumentPreviewScreen from './app/screens/DocumentPreviewScreen';
 import ImagePreview from './app/components/ImagePreview';
 import AllDocumentsScreen from './app/screens/AllDocumentsScreen';
 import './global.css';
+import QuickAIQuestionScreen from './app/screens/QuickAIQuestionScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -68,6 +69,15 @@ const App = () => {
           name="AllDocuments"
           component={AllDocumentsScreen}
           options={defaultHeaderOptions}
+        />
+        <Stack.Screen
+          name="QuickAIQuestion"
+          component={QuickAIQuestionScreen}
+          options={{
+            ...defaultHeaderOptions,
+            headerTitle: 'Questions',
+            headerBackTitle: 'Camera',
+          }}
         />
       </Stack.Navigator>
     </NavigationContainer>

@@ -1,9 +1,12 @@
 import React from 'react';
-import { View, TouchableOpacity, Alert } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
+import { useNavigation } from '@react-navigation/native';
 
 const CameraControls = ({ currentMode, currentAIMode, takePicture, pickImage }) => {
+    const navigation = useNavigation();
+
     const getAIModeIcon = () => {
         switch (currentAIMode) {
             case 'Math':
@@ -22,7 +25,7 @@ const CameraControls = ({ currentMode, currentAIMode, takePicture, pickImage }) 
     };
 
     const handleAIModePress = () => {
-        Alert.alert('Coming Soon', 'This feature is not yet available.');
+        navigation.navigate('QuickAIQuestion', { aiMode: currentAIMode });
     };
 
     return (

@@ -75,8 +75,29 @@ const ImagePreview = ({ route, navigation }) => {
 
     const getAIResponse = async (text) => {
         if (text === 'No text detected in the image.') {
-            setAiResponse("Looks like this image is playing hide and seek with its text! Maybe it's written in invisible ink?");
+            setAiResponse("Duket sikur kjo imazh po luan fshehurazi me tekstin e saj! Ndoshta është shkruar me bojë të padukshme? Ju lutemi, provoni të skanoni përsëri.");
             return;
+        }
+
+        let promptInstructions = '';
+        switch (aiMode.toLowerCase()) {
+            case 'math':
+                promptInstructions = 'Identifiko konceptet matematikore, shpjego formulat, dhe ofro hapa për zgjidhjen e problemeve nëse ka.';
+                break;
+            case 'science':
+                promptInstructions = 'Identifiko konceptet shkencore, shpjego fenomenet, dhe lidh informacionin me teori shkencore përkatëse.';
+                break;
+            case 'history':
+                promptInstructions = 'Identifiko ngjarjet historike, datat, personazhet, dhe ofro kontekst për rëndësinë e tyre historike.';
+                break;
+            case 'literature':
+                promptInstructions = 'Analizo elementet letrare, identifiko autorët, veprat, dhe ofro interpretim të temave ose simbolikës.';
+                break;
+            case 'language':
+                promptInstructions = 'Analizo strukturën gjuhësore, identifiko rregullat gramatikore, dhe shpjego nuancat e përdorimit të gjuhës.';
+                break;
+            default:
+                promptInstructions = 'Analizo tekstin dhe ofro një shpjegim të detajuar.';
         }
 
         try {
@@ -88,8 +109,19 @@ const ImagePreview = ({ route, navigation }) => {
                 },
                 body: JSON.stringify({
                     model: 'command-xlarge-nightly',
-                    prompt: `You are an AI assistant specialized in ${aiMode}. Provide a clear and short answer of the following text: ${text}`,
-                    max_tokens: 100,
+                    prompt: `Ti je një asistent i specializuar në ${aiMode}, rrjedhshëm në shqip. Analizo tekstin e mëposhtëm dhe ofro një përgjigje të qartë dhe koncize në shqip të rrjedhshëm. Sigurohu të përdorësh terminologjinë dhe konceptet e duhura që lidhen me ${aiMode}.
+
+Teksti për të analizuar: ${text}
+
+Udhëzime:
+1. ${promptInstructions}
+2. Jep një shpjegim të shkurtër ose zgjidhje në shqip.
+3. Nëse është e rëndësishme, sugjeroni fusha të mëtejshme studimi ose tema të ngjashme në ${aiMode}.
+4. Përdor shprehje idiomatike shqiptare kur është e përshtatshme për ta bërë përgjigjen më natyrale.
+5. Sigurohu që përgjigja të jetë e plotë dhe të mos ndërpritet në mes të një fjalie.
+
+Përgjigja jote në shqip të rrjedhshëm:`,
+                    max_tokens: 300,
                     temperature: 0.3,
                     k: 0,
                     stop_sequences: ['\n\n'],
@@ -105,7 +137,7 @@ const ImagePreview = ({ route, navigation }) => {
             }
         } catch (error) {
             console.error('Error getting AI response:', error);
-            setAiResponse('Sorry, there was an error processing the text.');
+            setAiResponse('Na vjen keq, ndodhi një gabim gjatë përpunimit të tekstit. Ju lutemi, provoni përsëri.');
         }
     };
 

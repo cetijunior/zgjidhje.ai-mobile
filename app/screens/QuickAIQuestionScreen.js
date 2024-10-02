@@ -3,8 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, ScrollView,
 import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
 import { LinearGradient } from 'expo-linear-gradient';
-
-const COHERE_API_KEY = 'PJGGChE4oZwlYrTX7HNL6rUJINkvRZesjma8nWHq'; // Replace with your actual Cohere API key
+import { COHERE_API_KEY } from '@env';
 
 const QuickAIQuestionScreen = ({ route, navigation }) => {
     const [messages, setMessages] = useState([]);
@@ -21,6 +20,27 @@ const QuickAIQuestionScreen = ({ route, navigation }) => {
         setInputText('');
         setIsLoading(true);
 
+        let promptInstructions = '';
+        switch (aiMode.toLowerCase()) {
+            case 'math':
+                promptInstructions = 'Identifiko konceptet matematikore, shpjego formulat, dhe ofro hapa për zgjidhjen e problemeve nëse ka.';
+                break;
+            case 'science':
+                promptInstructions = 'Identifiko konceptet shkencore, shpjego fenomenet, dhe lidh informacionin me teori shkencore përkatëse.';
+                break;
+            case 'history':
+                promptInstructions = 'Identifiko ngjarjet historike, datat, personazhet, dhe ofro kontekst për rëndësinë e tyre historike.';
+                break;
+            case 'literature':
+                promptInstructions = 'Analizo elementet letrare, identifiko autorët, veprat, dhe ofro interpretim të temave ose simbolikës.';
+                break;
+            case 'language':
+                promptInstructions = 'Analizo strukturën gjuhësore, identifiko rregullat gramatikore, dhe shpjego nuancat e përdorimit të gjuhës.';
+                break;
+            default:
+                promptInstructions = 'Analizo pyetjen dhe ofro një përgjigje të detajuar.';
+        }
+
         try {
             const response = await fetch('https://api.cohere.ai/v1/generate', {
                 method: 'POST',
@@ -30,8 +50,20 @@ const QuickAIQuestionScreen = ({ route, navigation }) => {
                 },
                 body: JSON.stringify({
                     model: 'command-xlarge-nightly',
-                    prompt: `You are an AI assistant specialized in ${aiMode}. Provide a concise answer to the following question: ${inputText}`,
-                    max_tokens: 150,
+                    prompt: `Ti je një asistent i specializuar në ${aiMode}, rrjedhshëm në shqip. Ofro një përgjigje koncize dhe informuese në shqip të rrjedhshëm për pyetjen e mëposhtme. Përdor terminologjinë dhe konceptet e duhura që lidhen me ${aiMode}.
+
+Pyetja: ${inputText}
+
+Udhëzime:
+1. Analizo pyetjen në kontekstin e ${aiMode}.
+2. ${promptInstructions}
+3. Jep një përgjigje të qartë dhe koncize në shqip.
+4. Nëse është e aplikueshme, sugjeroni tema të ngjashme ose fusha për eksplorim të mëtejshëm.
+5. Përdor shprehje idiomatike shqiptare për ta bërë përgjigjen të tingëllojë më natyrale.
+6. Sigurohu që përgjigja të jetë e plotë dhe të mos ndërpritet në mes të një fjalie.
+
+Përgjigja jote në shqip të rrjedhshëm:`,
+                    max_tokens: 300,
                     temperature: 0.7,
                     k: 0,
                     stop_sequences: [],
@@ -48,7 +80,7 @@ const QuickAIQuestionScreen = ({ route, navigation }) => {
             }
         } catch (error) {
             console.error('Error asking question:', error);
-            const errorMessage = { type: 'ai', content: 'Sorry, there was an error processing your question.' };
+            const errorMessage = { type: 'ai', content: 'Na vjen keq, ndodhi një gabim gjatë përpunimit të pyetjes suaj. Ju lutemi, provoni përsëri.' };
             setMessages(prevMessages => [...prevMessages, errorMessage]);
         } finally {
             setIsLoading(false);

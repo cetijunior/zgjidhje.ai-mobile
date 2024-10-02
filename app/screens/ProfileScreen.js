@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView, FlatList, Dimensions } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ScrollView, FlatList, Dimensions, ActivityIndicator } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
@@ -13,6 +13,7 @@ function ProfileScreen() {
     const [username, setUsername] = useState('John Doe');
     const [savedItems, setSavedItems] = useState([]);
     const [isPremium, setIsPremium] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     const premiumFeatures = [
         { icon: 'infinite', title: 'Unlimited Scans', description: 'Scan as many documents as you want' },
@@ -40,6 +41,7 @@ function ProfileScreen() {
     };
 
     const loadSavedItems = async () => {
+        setIsLoading(true);
         try {
             const savedItemsJSON = await AsyncStorage.getItem('savedItems');
             const items = savedItemsJSON ? JSON.parse(savedItemsJSON) : [];
@@ -48,6 +50,8 @@ function ProfileScreen() {
             setSavedItems(sortedItems);
         } catch (error) {
             console.error('Error loading saved items:', error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -86,6 +90,14 @@ function ProfileScreen() {
             <Ionicons name={feature.icon} size={48} color="#4F46E5" />
             <Text style={tw`text-xl font-bold mt-4 text-gray-800`}>{feature.title}</Text>
             <Text style={tw`text-sm text-gray-600 text-center mt-2`}>{feature.description}</Text>
+        </View>
+    );
+
+    const renderLoadingBubbles = () => (
+        <View style={tw`flex-row justify-center items-center py-4`}>
+            <View style={tw`w-3 h-3 bg-gray-300 rounded-full mr-1 `} />
+            <View style={tw`w-3 h-3 bg-gray-300 rounded-full mr-1 `} />
+            <View style={tw`w-3 h-3 bg-gray-300 rounded-full `} />
         </View>
     );
 
@@ -143,7 +155,9 @@ function ProfileScreen() {
                                 <Text style={tw`text-blue-500`}>See All</Text>
                             </TouchableOpacity>
                         </View>
-                        {savedItems.length > 0 ? (
+                        {isLoading ? (
+                            renderLoadingBubbles()
+                        ) : savedItems.length > 0 ? (
                             <FlatList
                                 data={savedItems.slice(0, 5)} // Show only the 5 most recent items
                                 renderItem={renderSavedItem}

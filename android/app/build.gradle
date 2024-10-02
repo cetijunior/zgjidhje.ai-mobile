@@ -109,7 +109,7 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.gauthclone"
+    namespace 'com.cj.gauthclone'
     defaultConfig {
         applicationId 'com.cj.gauthclone'
         minSdkVersion rootProject.ext.minSdkVersion

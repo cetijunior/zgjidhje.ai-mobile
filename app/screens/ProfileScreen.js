@@ -44,7 +44,7 @@ function ProfileScreen() {
             const savedItemsJSON = await AsyncStorage.getItem('savedItems');
             const items = savedItemsJSON ? JSON.parse(savedItemsJSON) : [];
             // Sort items by date in descending order (newest first)
-            const sortedItems = items.sort((a, b) => new Date(b.date) - new Date(a.date));
+            const sortedItems = items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
             setSavedItems(sortedItems);
         } catch (error) {
             console.error('Error loading saved items:', error);
@@ -68,15 +68,15 @@ function ProfileScreen() {
     const renderSavedItem = ({ item }) => (
         <TouchableOpacity
             style={tw`mr-3 mb-3`}
-            onPress={() => navigation.navigate(item.type === 'document' ? 'AllDocuments' : 'AllPictures', { document: item, image: item })}
+            onPress={() => navigation.navigate('SavedItems', { item })}
         >
-            {item.type === 'document' ? (
+            {item.imageUri ? (
+                <Image source={{ uri: item.imageUri }} style={tw`w-28 h-28 rounded-2xl shadow-sm`} />
+            ) : (
                 <View style={tw`w-28 h-28 bg-gray-100 rounded-2xl justify-center items-center shadow-sm`}>
                     <Ionicons name="document-text" size={40} color="#4B5563" />
-                    <Text style={tw`text-xs mt-2 text-center text-gray-600`} numberOfLines={1}>{item.name}</Text>
+                    <Text style={tw`text-xs mt-2 text-center text-gray-600`} numberOfLines={1}>{item.aiMode}</Text>
                 </View>
-            ) : (
-                <Image source={{ uri: item.uri }} style={tw`w-28 h-28 rounded-2xl shadow-sm`} />
             )}
         </TouchableOpacity>
     );
@@ -138,34 +138,22 @@ function ProfileScreen() {
 
                     <View style={tw`mt-8`}>
                         <View style={tw`flex-row justify-between items-center mb-4`}>
-                            <Text style={tw`text-xl font-semibold text-gray-800`}>Saved Items</Text>
-                            <View style={tw`flex-row`}>
-                                <TouchableOpacity onPress={() => navigation.navigate('AllPictures')} style={tw`mr-4`}>
-                                    <Ionicons name="images-outline" size={24} color="#4B5563" />
-                                </TouchableOpacity>
-                                <TouchableOpacity onPress={() => navigation.navigate('AllDocuments')}>
-                                    <Ionicons name="document-text-outline" size={24} color="#4B5563" />
-                                </TouchableOpacity>
-                            </View>
+                            <Text style={tw`text-xl font-semibold text-gray-800`}>Recent Items</Text>
+                            <TouchableOpacity onPress={() => navigation.navigate('AllSavedItems')}>
+                                <Text style={tw`text-blue-500`}>See All</Text>
+                            </TouchableOpacity>
                         </View>
                         {savedItems.length > 0 ? (
                             <FlatList
-                                data={savedItems.slice().reverse()}
+                                data={savedItems.slice(0, 5)} // Show only the 5 most recent items
                                 renderItem={renderSavedItem}
                                 keyExtractor={(item) => item.id}
                                 horizontal
                                 showsHorizontalScrollIndicator={false}
-                                contentContainerStyle={tw`justify-start`}
-                                initialScrollIndex={0}
-                                getItemLayout={(data, index) => ({
-                                    length: 100, // Adjust this value based on your item width
-                                    offset: 100 * index,
-                                    index,
-                                })}
                             />
                         ) : (
                             <View style={tw`items-center py-4`}>
-                                <Ionicons name="document-text-outline" size={48} color="#9CA3AF" style={tw`mb-2`} />
+                                <Ionicons name="images-outline" size={48} color="#9CA3AF" style={tw`mb-2`} />
                                 <Text style={tw`text-gray-500 text-center`}>No saved items yet</Text>
                             </View>
                         )}
@@ -190,5 +178,6 @@ function ProfileScreen() {
         </View>
     );
 }
+
 
 export default ProfileScreen;

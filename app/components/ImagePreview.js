@@ -1,27 +1,84 @@
 import React, { useState, useEffect } from 'react';
-import { View, Image, TouchableOpacity, Text, ScrollView, ActivityIndicator, SafeAreaView, Share, Modal } from 'react-native';
+import { View, Image, TouchableOpacity, Text, ScrollView, ActivityIndicator, SafeAreaView, Share, Modal, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
 import * as FileSystem from 'expo-file-system';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { COHERE_API_KEY, GOOGLE_CLOUD_VISION_API_KEY } from '@env';
 
-const COHERE_API_KEY = 'PJGGChE4oZwlYrTX7HNL6rUJINkvRZesjma8nWHq';
-
-const ImagePreview = ({ capturedImage, extractedText, onRetake, onSave, aiMode }) => {
+const ImagePreview = ({ route, navigation }) => {
+    const { capturedImage, aiMode } = route.params;
+    const [extractedText, setExtractedText] = useState('');
     const [aiResponse, setAiResponse] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isExtracting, setIsExtracting] = useState(false);
     const [fullScreenVisible, setFullScreenVisible] = useState(false);
-    const navigation = useNavigation();
 
     useEffect(() => {
-        console.log('Extracted text in ImagePreview:', extractedText);
-        if (extractedText) {
-            getAIResponse();
-        }
-    }, [extractedText]);
+        extractTextFromImage(capturedImage.uri);
+    }, []);
 
-    const getAIResponse = async () => {
+    const extractTextFromImage = async (imageUri) => {
+        setIsExtracting(true);
         setIsLoading(true);
+        try {
+            const base64ImageData = await FileSystem.readAsStringAsync(imageUri, {
+                encoding: FileSystem.EncodingType.Base64,
+            });
+
+            const body = JSON.stringify({
+                requests: [
+                    {
+                        image: {
+                            content: base64ImageData,
+                        },
+                        features: [
+                            {
+                                type: 'TEXT_DETECTION',
+                                maxResults: 1,
+                            },
+                        ],
+                    },
+                ],
+            });
+
+            const response = await fetch(
+                `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_CLOUD_VISION_API_KEY}`,
+                {
+                    method: 'POST',
+                    body: body,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                }
+            );
+
+            const data = await response.json();
+
+            if (data.responses && data.responses[0] && data.responses[0].fullTextAnnotation) {
+                setExtractedText(data.responses[0].fullTextAnnotation.text);
+                await getAIResponse(data.responses[0].fullTextAnnotation.text);
+            } else {
+                setExtractedText('No text detected in the image.');
+                setAiResponse("Looks like this image is playing hide and seek with its text! Maybe it's written in invisible ink? Scan Again!");
+            }
+        } catch (error) {
+            console.error('Error extracting text:', error);
+            setExtractedText('Error extracting text from the image.');
+            setAiResponse('An error occurred while processing the image.');
+        } finally {
+            setIsExtracting(false);
+            setIsLoading(false);
+        }
+    };
+
+    const getAIResponse = async (text) => {
+        if (text === 'No text detected in the image.') {
+            setAiResponse("Looks like this image is playing hide and seek with its text! Maybe it's written in invisible ink?");
+            return;
+        }
+
         try {
             const response = await fetch('https://api.cohere.ai/v1/generate', {
                 method: 'POST',
@@ -31,7 +88,7 @@ const ImagePreview = ({ capturedImage, extractedText, onRetake, onSave, aiMode }
                 },
                 body: JSON.stringify({
                     model: 'command-xlarge-nightly',
-                    prompt: `You are an AI assistant specialized in ${aiMode}. Provide a clear and short answer of the following text: ${extractedText}`,
+                    prompt: `You are an AI assistant specialized in ${aiMode}. Provide a clear and short answer of the following text: ${text}`,
                     max_tokens: 100,
                     temperature: 0.3,
                     k: 0,
@@ -49,21 +106,65 @@ const ImagePreview = ({ capturedImage, extractedText, onRetake, onSave, aiMode }
         } catch (error) {
             console.error('Error getting AI response:', error);
             setAiResponse('Sorry, there was an error processing the text.');
-        } finally {
-            setIsLoading(false);
         }
     };
 
     const shareAnswer = async () => {
         try {
-            const imageUri = capturedImage.uri;
-            const base64Image = await FileSystem.readAsStringAsync(imageUri, { encoding: FileSystem.EncodingType.Base64 });
-            await Share.share({
-                message: `AI Analysis (${aiMode}): ${aiResponse}`,
-                url: `data:image/jpeg;base64,${base64Image}`,
-            });
+            const message = `
+AI Mode: ${aiMode}
+
+Extracted Text:
+${extractedText}
+
+---
+
+AI Analysis:
+${aiResponse}
+
+- Powered by @zgjidhje.ai
+            `.trim();
+
+            const shareOptions = {
+                message: message,
+            };
+
+            if (capturedImage.uri) {
+                shareOptions.url = capturedImage.uri;
+            }
+
+            await Share.share(shareOptions);
         } catch (error) {
-            console.error('Error sharing:', error);
+            console.error('Error sharing item:', error);
+        }
+    };
+
+    const handleSave = async () => {
+        try {
+            const newItem = {
+                id: Date.now().toString(),
+                imageUri: capturedImage.uri,
+                extractedText,
+                aiResponse,
+                aiMode,
+                timestamp: new Date().toISOString(),
+            };
+
+            // Get existing saved items
+            const savedItemsJSON = await AsyncStorage.getItem('savedItems');
+            const savedItems = savedItemsJSON ? JSON.parse(savedItemsJSON) : [];
+
+            // Add new item to the savedItems array
+            savedItems.push(newItem);
+
+            // Save updated savedItems back to AsyncStorage
+            await AsyncStorage.setItem('savedItems', JSON.stringify(savedItems));
+
+            Alert.alert('Success', 'Item saved successfully!');
+            navigation.navigate('Profile');
+        } catch (error) {
+            console.error('Error saving item:', error);
+            Alert.alert('Error', 'Failed to save item. Please try again.');
         }
     };
 
@@ -85,7 +186,11 @@ const ImagePreview = ({ capturedImage, extractedText, onRetake, onSave, aiMode }
                         showsVerticalScrollIndicator={true}
                         indicatorStyle="white"
                     >
-                        <Text style={tw`text-base text-gray-200`}>{extractedText || 'No text extracted'}</Text>
+                        {isExtracting ? (
+                            <ActivityIndicator size="large" color="#8B5CF6" />
+                        ) : (
+                            <Text style={tw`text-base text-gray-200`}>{extractedText || 'No text extracted'}</Text>
+                        )}
                     </ScrollView>
                     <View style={tw`border-t border-purple-500 my-2`} />
                     <Text style={tw`text-lg font-bold mb-2 text-white`}>AI Analysis ({aiMode}):</Text>
@@ -104,10 +209,7 @@ const ImagePreview = ({ capturedImage, extractedText, onRetake, onSave, aiMode }
                 </View>
             </View>
             <View style={tw`flex-row justify-evenly p-4 bg-gray-800`}>
-                <TouchableOpacity style={tw`p-3 bg-red-500 rounded-full`} onPress={onRetake}>
-                    <Ionicons name="close" size={24} color="white" />
-                </TouchableOpacity>
-                <TouchableOpacity style={tw`p-3 bg-green-500 rounded-full`} onPress={() => onSave(capturedImage)}>
+                <TouchableOpacity style={tw`p-3 bg-green-500 rounded-full`} onPress={handleSave}>
                     <Ionicons name="save-outline" size={24} color="white" />
                 </TouchableOpacity>
                 <TouchableOpacity style={tw`p-3 bg-blue-500 rounded-full`} onPress={shareAnswer}>

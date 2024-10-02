@@ -10,9 +10,6 @@ import tw from 'twrnc';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
-// Remove this line if it's still present
-// import { vision } from '@google-cloud/vision';
-
 import CameraControls from '../components/CameraControls';
 import ImagePreview from '../components/ImagePreview';
 import ModeSwitcher from '../components/ModeSwitcher';
@@ -49,8 +46,102 @@ export default function CameraViewScreen() {
             const photo = await cameraRef.current.takePictureAsync({
                 quality: 1,
             });
-            setCapturedImage(photo);
-            await extractTextFromImage(photo.uri);  // Extract text immediately after capturing
+            navigation.navigate('ImageEdit', {
+                imageUri: photo.uri,
+                aiMode: currentAIMode,
+                scanArea: scanArea
+            });
+        }
+    };
+
+    const handleEditedImage = async (editedImageUri) => {
+        setCapturedImage({ uri: editedImageUri });
+        await processImage(editedImageUri);
+    };
+
+    const processImage = async (imageUri) => {
+        setIsProcessing(true);
+        try {
+            await extractTextFromImage(imageUri);
+            await processTextWithCohere(extractedText);
+        } catch (error) {
+            console.error('Error processing image:', error);
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const extractTextFromImage = async (imageUri) => {
+        setIsProcessing(true);
+        try {
+            // Read the image file and convert it to base64
+            const base64ImageData = await FileSystem.readAsStringAsync(imageUri, {
+                encoding: FileSystem.EncodingType.Base64,
+            });
+
+            // Prepare the request body
+            const body = JSON.stringify({
+                requests: [
+                    {
+                        image: {
+                            content: base64ImageData,
+                        },
+                        features: [
+                            {
+                                type: 'TEXT_DETECTION',
+                            },
+                        ],
+                    },
+                ],
+            });
+
+            // Make the API request
+            const response = await fetch(
+                'https://vision.googleapis.com/v1/images:annotate?key=AIzaSyCjkrmkLZDfxdTjZROd3PTo2m7xmWeUEc0',
+                {
+                    method: 'POST',
+                    body: body,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                }
+            );
+
+            const result = await response.json();
+            console.log('API Response:', result);  // Log the entire response
+
+            if (result.responses && result.responses[0] && result.responses[0].fullTextAnnotation) {
+                const detectedText = result.responses[0].fullTextAnnotation.text;
+                console.log('Detected text:', detectedText);  // Log the detected text
+                setExtractedText(detectedText);
+            } else {
+                console.log('No text detected in the image');
+                setExtractedText('No text detected in the image');
+            }
+        } catch (error) {
+            console.error('Error extracting text:', error);
+            setExtractedText('Error extracting text: ' + error.message);
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const processTextWithCohere = async (text) => {
+        try {
+            cohere.init('YOUR_COHERE_API_KEY');
+            const response = await cohere.generate({
+                model: 'command-xlarge-nightly',
+                prompt: `Analyze the following text and provide a summary or answer questions about it: ${text}`,
+                max_tokens: 300,
+                temperature: 0.9,
+                k: 0,
+                stop_sequences: [],
+                return_likelihoods: 'NONE'
+            });
+            console.log('Cohere response:', response.body.generations[0].text);
+            // Handle the response (e.g., display it to the user)
+        } catch (error) {
+            console.error('Error processing text with Cohere:', error);
         }
     };
 
@@ -154,80 +245,6 @@ export default function CameraViewScreen() {
         }
     };
 
-    const extractTextFromImage = async (imageUri) => {
-        setIsProcessing(true);
-        try {
-            // Read the image file and convert it to base64
-            const base64ImageData = await FileSystem.readAsStringAsync(imageUri, {
-                encoding: FileSystem.EncodingType.Base64,
-            });
-
-            // Prepare the request body
-            const body = JSON.stringify({
-                requests: [
-                    {
-                        image: {
-                            content: base64ImageData,
-                        },
-                        features: [
-                            {
-                                type: 'TEXT_DETECTION',
-                            },
-                        ],
-                    },
-                ],
-            });
-
-            // Make the API request
-            const response = await fetch(
-                'https://vision.googleapis.com/v1/images:annotate?key=AIzaSyCjkrmkLZDfxdTjZROd3PTo2m7xmWeUEc0',
-                {
-                    method: 'POST',
-                    body: body,
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                }
-            );
-
-            const result = await response.json();
-            console.log('API Response:', result);  // Log the entire response
-
-            if (result.responses && result.responses[0] && result.responses[0].fullTextAnnotation) {
-                const detectedText = result.responses[0].fullTextAnnotation.text;
-                console.log('Detected text:', detectedText);  // Log the detected text
-                setExtractedText(detectedText);
-            } else {
-                console.log('No text detected in the image');
-                setExtractedText('No text detected in the image');
-            }
-        } catch (error) {
-            console.error('Error extracting text:', error);
-            setExtractedText('Error extracting text: ' + error.message);
-        } finally {
-            setIsProcessing(false);
-        }
-    };
-
-    const processTextWithCohere = async (text) => {
-        try {
-            cohere.init('YOUR_COHERE_API_KEY');
-            const response = await cohere.generate({
-                model: 'command-xlarge-nightly',
-                prompt: `Analyze the following text and provide a summary or answer questions about it: ${text}`,
-                max_tokens: 300,
-                temperature: 0.9,
-                k: 0,
-                stop_sequences: [],
-                return_likelihoods: 'NONE'
-            });
-            console.log('Cohere response:', response.body.generations[0].text);
-            // Handle the response (e.g., display it to the user)
-        } catch (error) {
-            console.error('Error processing text with Cohere:', error);
-        }
-    };
-
     const renderCamera = () => {
         const screenWidth = Dimensions.get('window').width;
         const screenHeight = Dimensions.get('window').height;
@@ -293,9 +310,10 @@ export default function CameraViewScreen() {
             extractedText={extractedText}
             onRetake={() => {
                 setCapturedImage(null);
-                setExtractedText('');  // Clear the extracted text when retaking
+                setExtractedText('');
             }}
             onSave={saveItem}
+            aiMode={currentAIMode}
         />
     );
 
@@ -305,13 +323,14 @@ export default function CameraViewScreen() {
                 <View style={tw`flex-1 justify-center items-center`}>
                     <Text>Processing image...</Text>
                 </View>
-            ) : selectedDocument ? renderDocumentPreview() :
-                capturedImage ? renderImagePreview() :
-                    renderCamera()}
+            ) : capturedImage ? (
+                renderImagePreview()
+            ) : (
+                renderCamera()
+            )}
         </View>
     );
 }
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,

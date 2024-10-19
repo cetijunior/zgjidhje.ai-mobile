@@ -29,7 +29,6 @@ const defaultHeaderOptions = {
   },
 };
 
-
 export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -43,7 +42,10 @@ export default function App() {
           <Stack.Screen
             name="CameraView"
             component={CameraViewScreen}
-            options={{ headerShown: false }}
+            options={{ 
+              headerShown: false, 
+              gestureEnabled: false // Disable back swipe
+            }}
           />
           <Stack.Screen
             name="ImageEdit"
@@ -58,6 +60,7 @@ export default function App() {
             options={{
               ...defaultHeaderOptions,
               headerTitle: 'Profile',
+              gestureEnabled: false // Disable back swipe
             }}
           />
           <Stack.Screen

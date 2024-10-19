@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { CameraView } from 'expo-camera';
 import { StyleSheet, TouchableOpacity, View, Text, Dimensions, ScrollView, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import tw from 'twrnc';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { Camera } from 'expo-camera'; // Import Camera from expo-camera
 
 import CameraControls from '../components/CameraControls';
 import ImagePreview from '../components/ImagePreview';
@@ -21,6 +22,7 @@ export default function CameraViewScreen() {
     const cameraRef = useRef(null);
     const navigation = useNavigation();
     const [scanArea, setScanArea] = useState({ x: 0, y: 0, width: 0, height: 0 });
+    const [hasPermission, setHasPermission] = useState(null); // State to manage camera permission
 
     const modes = [
         { key: 'document', icon: 'document-text-outline' },
@@ -33,7 +35,38 @@ export default function CameraViewScreen() {
         { key: 'history', icon: 'book', label: 'History' },
         { key: 'literature', icon: 'library', label: 'Literature' },
         { key: 'language', icon: 'language', label: 'Language' },
+        
     ];
+
+    useEffect(() => {
+        const checkCameraPermissions = async () => {
+            const { status } = await Camera.getCameraPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert(
+                    "Camera Access Required",
+                    "This app requires access to your camera. Please allow access.",
+                    [
+                        {
+                            text: "Cancel",
+                            onPress: () => console.log("Camera permission denied"),
+                            style: "cancel"
+                        },
+                        {
+                            text: "OK",
+                            onPress: async () => {
+                                const { status: newStatus } = await Camera.requestCameraPermissionsAsync();
+                                setHasPermission(newStatus === 'granted'); // Update state based on permission status
+                            }
+                        }
+                    ]
+                );
+            } else {
+                setHasPermission(true); // Permission already granted
+            }
+        };
+
+        checkCameraPermissions(); // Call the permission function when the component mounts
+    }, []);
 
     const takePicture = async () => {
         if (cameraRef.current) {
@@ -84,12 +117,12 @@ export default function CameraViewScreen() {
             <CameraView ref={cameraRef} style={tw`flex-1`} facing={facing}>
                 <View style={tw`flex-1 bg-transparent justify-between`}>
                     <ModeSwitcher currentMode={currentMode} toggleMode={() => setCurrentMode(currentMode === 'document' ? 'photo' : 'document')} currentAIMode={currentAIMode} />
-                    <ScanArea style={scanAreaStyle} />
+                    {/* <ScanArea style={scanAreaStyle} /> */}
                     <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={tw`justify-center items-center px-4 py-2`}
-                        style={tw`absolute bottom-30 left-0 right-0`}
+                        contentContainerStyle={tw`justify-center items-center px-0 py-2`}
+                        style={tw`absolute bottom-36 left-0 right-0 border-white rounded-lg border-2`}
                     >
                         {AImodes.map((mode) => (
                             <TouchableOpacity

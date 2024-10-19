@@ -11,17 +11,18 @@
     "preview": {
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "COHERE_API_KEY": "PJGGChE4oZwlYrTX7HNL6rUJINkvRZesjma8nWHq",
+        "GOOGLE_CLOUD_VISION_API_KEY": "AIzaSyCjkrmkLZDfxdTjZROd3PTo2m7xmWeUEc0"
       }
     },
-    "preview2": {
-      "android": {
-        "gradleCommand": ":app:assembleRelease"
+    "production": {
+      "env": {
+        "COHERE_API_KEY": "PJGGChE4oZwlYrTX7HNL6rUJINkvRZesjma8nWHq",
+        "GOOGLE_CLOUD_VISION_API_KEY": "AIzaSyCjkrmkLZDfxdTjZROd3PTo2m7xmWeUEc0"
       }
-    },
-    "preview3": {
-      "developmentClient": true
-    },
-    "production": {}
+    }
   },
   "submit": {
     "production": {}

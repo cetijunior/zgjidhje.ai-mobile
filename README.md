@@ -1,19 +1,20 @@
-Zgjidhje.AI Mobile (Mobile App)
-Repository Link: zgjidhje.ai-mobile
+# Zgjidhje.AI Mobile (Mobile App)
 
-Description:
-Zgjidhje.AI Mobile brings the power of the Zgjidhje.AI platform to mobile devices. The app is designed to provide academic solutions on the go, enabling users to upload images or text queries for instant AI-generated responses.
+[GitHub Repository](https://github.com/cetijunior/zgjidhje.ai-mobile)
 
-Key Features:
+## Description
+Zgjidhje.AI Mobile is the mobile application of the Zgjidhje.AI platform, bringing academic solutions to users on the go. The app provides an easy-to-use interface for submitting queries and receiving real-time AI responses.
 
-Mobile-optimized AI query submission via text or image uploads.
-User-friendly design tailored for Android and iOS platforms.
-Integrated with the Zgjidhje.AI backend for seamless AI-powered responses.
-Technologies Used:
+## Features
+- AI query submission via text or image uploads.
+- Mobile-friendly design for Android and iOS platforms.
+- Real-time response integration with the backend.
 
-React Native
-Expo
-Axios
+## Technologies Used
+- React Native
+- Expo
+- Axios
+
 
 
 [Video Demo]
